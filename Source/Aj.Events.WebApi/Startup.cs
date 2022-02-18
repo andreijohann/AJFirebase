@@ -1,4 +1,5 @@
 using Aj.Events.WebApi.Models;
+using Aj.Events.WebApi.Swagger;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -27,10 +28,20 @@ namespace Aj.Events.WebApi
         public void ConfigureServices(IServiceCollection services)
         {
             var aplConfig = new AplConfig();
-            Configuration.Bind("AplConfig", aplConfig);
+            Configuration.Bind(nameof(AplConfig), aplConfig);
             services.AddSingleton(aplConfig);
 
+            services.AddApiVersioning();
+            services.AddVersionedApiExplorer(options => {
+                options.GroupNameFormat = "'v'VVV";
+                options.SubstituteApiVersionInUrl = true;
+            });
+
             services.AddControllers();
+
+            services.AddSwaggerGen(c => {
+                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Events API", Version = "v1" });
+            });
 
         }
 
@@ -41,6 +52,15 @@ namespace Aj.Events.WebApi
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            var swaggerOptions = new SwaggerOptions();
+            Configuration.GetSection(nameof(SwaggerOptions)).Bind(swaggerOptions);
+
+            app.UseSwagger(option => { option.RouteTemplate = swaggerOptions.JsonRoute; });
+            app.UseSwaggerUI(options => {
+                options.RoutePrefix = "apidocs";
+                options.SwaggerEndpoint(swaggerOptions.UIEndpoint, swaggerOptions.Description); 
+            });
 
             app.UseHttpsRedirection();
 
